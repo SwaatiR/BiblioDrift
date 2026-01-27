@@ -466,3 +466,37 @@ main {
     transform: rotate(15deg) scale(1.1);
     color: var(--accent-gold);
 }
+
+/* --- Back to Top Button --- */
+.back-to-top {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--header-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    opacity: 1;
+    visibility: visible;
+    transition: all 0.4s ease;
+    backdrop-filter: blur(5px);
+}
+
+.back-to-top.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+}
+
+.back-to-top:hover {
+    background: var(--book-bg);
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    color: var(--accent-gold);
+}
