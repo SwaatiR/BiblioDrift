@@ -245,4 +245,23 @@ document.addEventListener('DOMContentLoaded', () => {
         libManager.renderShelf('current', 'shelf-current');
         libManager.renderShelf('finished', 'shelf-finished');
     }
+
+    // Scroll Manager (Back to Top)
+    const backToTopBtn = document.getElementById('backToTop');
+    if (backToTopBtn) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > window.innerHeight * 2) {
+                backToTopBtn.classList.remove('hidden');
+            } else {
+                backToTopBtn.classList.add('hidden');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
 });
