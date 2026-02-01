@@ -500,3 +500,36 @@ main {
     box-shadow: 0 15px 30px rgba(0,0,0,0.15);
     color: var(--accent-gold);
 }
+/*Footer design */
+
+.footer {
+    min-height: 120px;
+    width: 100%;
+    background-color: #222; 
+    display: flex;
+    flex-direction: column; 
+    justify-content: center;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 2rem 0;
+    margin-top: 4rem;
+
+}
+
+.social_icons {
+    display: flex;
+    gap: 2rem;
+    z-index: 999;
+}
+
+.social_icons a {
+    color: var(--accent-gold);
+    font-size: 2rem;
+    transition: transform 0.3s ease,color 0.3s ease;
+    text-decoration: none;
+}
+
+.social_icons a:hover {
+    color: white;
+    transform: translateY(-5px);
+}
