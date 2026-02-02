@@ -60,6 +60,48 @@ def _rate_limited(endpoint: str) -> tuple[bool, int]:
 if MOOD_ANALYSIS_AVAILABLE:
     ai_service = AIBookService()
 
+@app.route('/')
+def index():
+    """Simple index page showing available API endpoints."""
+    endpoints_info = {
+        "service": "BiblioDrift Mood Analysis API",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "GET /": "This page - API documentation",
+            "GET /api/v1/health": "Health check endpoint",
+            "POST /api/v1/generate-note": "Generate AI book notes",
+            "POST /api/v1/chat": "Chat with bookseller",
+            "POST /api/v1/mood-search": "Search books by mood/vibe"
+        },
+        "note": "All endpoints except / and /api/v1/health require POST requests with JSON body",
+        "example_usage": {
+            "chat": {
+                "url": "/api/v1/chat",
+                "method": "POST",
+                "body": {"message": "I want something cozy for a rainy evening"}
+            },
+            "mood_search": {
+                "url": "/api/v1/mood-search", 
+                "method": "POST",
+                "body": {"query": "mystery thriller"}
+            }
+        }
+    }
+    
+    if MOOD_ANALYSIS_AVAILABLE:
+        endpoints_info["endpoints"]["POST /api/v1/analyze-mood"] = "Analyze book mood from GoodReads"
+        endpoints_info["endpoints"]["POST /api/v1/mood-tags"] = "Get mood tags for a book"
+        endpoints_info["example_usage"]["mood_analysis"] = {
+            "url": "/api/v1/analyze-mood",
+            "method": "POST", 
+            "body": {"title": "The Great Gatsby", "author": "F. Scott Fitzgerald"}
+        }
+    else:
+        endpoints_info["note"] += " | Mood analysis endpoints disabled (missing dependencies)"
+    
+    return jsonify(endpoints_info)
+
 @app.route('/api/v1/analyze-mood', methods=['POST'])
 def handle_analyze_mood():
     """Analyze book mood using GoodReads reviews."""
@@ -212,6 +254,53 @@ def handle_generate_note():
             "error": str(e)
         }), 500
 
+@app.route('/api/v1/chat', methods=['POST'])
+def handle_chat():
+    """Handle chat messages and generate bookseller responses."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON or missing request body"}), 400
+            
+        user_message = data.get('message', '')
+        conversation_history = data.get('history', [])
+        
+        if not user_message:
+            return jsonify({"error": "Message is required"}), 400
+        
+        # Validate and limit conversation history
+        if not isinstance(conversation_history, list):
+            conversation_history = []
+        
+        # Limit history size for security and performance
+        conversation_history = conversation_history[-10:]  # Only keep last 10 messages
+        
+        # Validate each message in history
+        validated_history = []
+        for msg in conversation_history:
+            if isinstance(msg, dict) and 'type' in msg and 'content' in msg:
+                if len(str(msg.get('content', ''))) <= 1000:  # Limit message size
+                    validated_history.append(msg)
+        
+        # Generate contextual response based on conversation history
+        response = generate_chat_response(user_message, validated_history)
+        
+        # Try to get book recommendations based on the message
+        recommendations = get_ai_recommendations(user_message)
+        
+        return jsonify({
+            "success": True,
+            "response": response,
+            "recommendations": recommendations,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 @app.route('/api/v1/health', methods=['GET'])
 def health_check():
     """Health check endpoint."""
@@ -223,14 +312,22 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    print("--- BIBLIODRIFT MOOD ANALYSIS SERVER STARTING ON PORT 5000 ---")
-    print("Available endpoints:")
-    print("  POST /api/v1/generate-note - Generate AI book notes")
-    if MOOD_ANALYSIS_AVAILABLE:
-        print("  POST /api/v1/analyze-mood - Analyze book mood from GoodReads")
-        print("  POST /api/v1/mood-tags - Get mood tags for a book")
-    else:
-        print("  [DISABLED] Mood analysis endpoints (missing dependencies)")
-    print("  POST /api/v1/mood-search - Search books by mood/vibe")
-    print("  GET  /api/v1/health - Health check")
-    app.run(debug=True, port=5000)
+    import os
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    port = int(os.getenv('PORT', 5000))
+    host = os.getenv('FLASK_HOST', '127.0.0.1')  # Default to localhost for security
+    
+    if debug_mode:
+        print("--- BIBLIODRIFT MOOD ANALYSIS SERVER STARTING ON PORT", port, "---")
+        print("Available endpoints:")
+        print("  POST /api/v1/generate-note - Generate AI book notes")
+        if MOOD_ANALYSIS_AVAILABLE:
+            print("  POST /api/v1/analyze-mood - Analyze book mood from GoodReads")
+            print("  POST /api/v1/mood-tags - Get mood tags for a book")
+        else:
+            print("  [DISABLED] Mood analysis endpoints (missing dependencies)")
+        print("  POST /api/v1/mood-search - Search books by mood/vibe")
+        print("  POST /api/v1/chat - Chat with bookseller")
+        print("  GET  /api/v1/health - Health check")
+    
+    app.run(debug=debug_mode, port=port, host=host)
