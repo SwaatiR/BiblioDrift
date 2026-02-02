@@ -468,3 +468,18 @@ if (backToTopBtn) {
     });
 }
 });
+
+function handleAuth(event) {
+  event.preventDefault();
+
+  const email = document.getElementById("email").value;
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(email)) {
+    alert("Enter a valid email address");
+    return;
+  }
+
+  window.location.href = "library.html";
+}
