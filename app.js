@@ -12,8 +12,9 @@ class BookRenderer {
         this.moodAnalyzer = new MoodAnalyzer();
     }
 
-    async createBookElement(bookData) {
+    async createBookElement(bookData, shelf = null) {
         const { id, volumeInfo } = bookData;
+        const progress = typeof bookData.progress === 'number' ? bookData.progress : 0;
         const title = volumeInfo.title || "Untitled";
         const authors = volumeInfo.authors ? volumeInfo.authors.join(", ") : "Unknown Author";
         const thumb = volumeInfo.imageLinks ? volumeInfo.imageLinks.thumbnail : 'https://via.placeholder.com/128x196?text=No+Cover';
@@ -69,6 +70,19 @@ class BookRenderer {
                             </div>
                         </div>` : ''}
                     </div>
+                    ${shelf === 'current' ? `
+                <div class="reading-progress">
+                        <input 
+                        type="range" 
+                        min="0" 
+                        max="100" 
+                        value="${progress}" 
+                        class="progress-slider"
+                    />
+                <small>${progress}% read</small>
+                </div>
+                ` : ''}
+
                     <div class="book-actions">
                         <button class="btn-icon add-btn" title="Add to Library"><i class="fa-regular fa-heart"></i></button>
                         <button class="btn-icon mood-btn" title="Analyze Mood" onclick="event.stopPropagation(); this.closest('.book-scene').querySelector('.book-renderer').showMoodAnalysis('${title}', '${authors}')"><i class="fa-solid fa-brain"></i></button>
@@ -83,22 +97,47 @@ class BookRenderer {
             </div>
         `;
 
-        // Store reference for mood analysis
-        scene.querySelector('.book-scene').bookRenderer = this;
+        // Progress slider logic
+const slider = scene.querySelector('.progress-slider');
+if (slider) {
+    slider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value, 10);
+        const lib = JSON.parse(localStorage.getItem('bibliodrift_library'));
+
+        for (const shelf in lib) {
+            const book = lib[shelf].find(b => b.id === id);
+            if (book) {
+                book.progress = value;
+                break;
+            }
+        }
+        this.libraryManager.library = lib;
+
+
+        localStorage.setItem('bibliodrift_library', JSON.stringify(lib));
+
+        const label = slider.nextElementSibling;
+        if (label) label.textContent = `${value}% read`;
+    });
+}
 
         // Interaction: Flip
         const bookEl = scene.querySelector('.book');
         scene.addEventListener('click', (e) => {
-            if (!e.target.closest('.btn-icon')) {
-                bookEl.classList.toggle('flipped');
-            }
+        if (
+            !e.target.closest('.btn-icon') &&
+            !e.target.closest('.reading-progress')
+        ) {
+            bookEl.classList.toggle('flipped');
+        }
         });
+
 
         // Interaction: Add to Library
         const addBtn = scene.querySelector('.add-btn');
         addBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.libraryManager.addBook(bookData, 'want'); // Default to "Want to Read"
+            this.libraryManager.addBook(bookData, 'current'); // Default to "Want to Read"
             addBtn.innerHTML = '<i class="fa-solid fa-check"></i>';
             setTimeout(() => addBtn.innerHTML = '<i class="fa-solid fa-heart"></i>', 2000);
         });
@@ -318,13 +357,17 @@ class LibraryManager {
     }
 
     addBook(book, shelf) {
-        // Check duplicates
-        if (this.findBook(book.id)) return;
+    if (this.findBook(book.id)) return;
 
-        this.library[shelf].push(book);
-        this.save();
-        console.log(`Added ${book.volumeInfo.title} to ${shelf}`);
+    const enrichedBook = {
+        ...book,
+        progress: shelf === 'current' ? 0 : null
+    };
+
+    this.library[shelf].push(enrichedBook);
+    this.save();
     }
+
 
     findBook(id) {
         for (const shelf in this.library) {
@@ -352,13 +395,14 @@ class LibraryManager {
         const emptyState = container.querySelector('.empty-state');
         if (emptyState) emptyState.remove();
 
-        books.forEach(book => {
-            const renderer = new BookRenderer();
-            const el = renderer.createBookElement(book);
-            // On shelves, we might want interaction to be "Move" or "Remove", 
-            // but for MVP reuse the same card.
-            container.appendChild(el);
-        });
+        (async () => {
+    for (const book of books) {
+        const renderer = new BookRenderer();
+        const el = await renderer.createBookElement(book, shelfName);
+        container.appendChild(el);
+    }
+    })();
+
     }
 }
 

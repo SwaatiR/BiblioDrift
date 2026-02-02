@@ -760,3 +760,17 @@ main {
     color: white;
     transform: translateY(-5px);
 }
+.reading-progress {
+    margin-top: 0.75rem;
+    opacity: 0.85;
+}
+
+.progress-slider {
+    width: 100%;
+    accent-color: var(--accent-gold);
+}
+
+.reading-progress small {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
