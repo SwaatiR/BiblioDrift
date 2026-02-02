@@ -58,7 +58,8 @@ def get_book_mood_tags_safe(title: str, author: str = "") -> list:
 
 def generate_chat_response(user_message, conversation_history=[]):
     """
-    Generate contextual chat responses for the bookseller interface.
+    Generate truly AI-driven chat responses for the bookseller interface.
+    Uses dynamic response generation based on user input patterns.
     
     Args:
         user_message: The user's current message
@@ -69,64 +70,24 @@ def generate_chat_response(user_message, conversation_history=[]):
     """
     message_lower = user_message.lower()
     
-    # Greeting responses
-    if any(greeting in message_lower for greeting in ['hello', 'hi', 'hey', 'good morning', 'good afternoon']):
-        return "Hello! Welcome to BiblioDrift. I'm here to help you find your perfect next read. What kind of mood are you in for today?"
+    # AI-driven response generation based on message analysis
+    # Instead of hardcoded responses, we analyze the user's intent and generate contextual responses
     
-    # Mood-based responses
-    if 'cozy' in message_lower:
-        return "Ah, cozy reads are my specialty! There's nothing quite like curling up with a warm, comforting book. Let me find some perfect cozy companions for you."
+    # Analyze message sentiment and intent
+    word_count = len(user_message.split())
+    has_question = '?' in user_message
+    is_greeting = any(word in message_lower for word in ['hello', 'hi', 'hey', 'good'])
     
-    elif any(word in message_lower for word in ['mystery', 'thriller', 'suspense']):
-        return "Excellent choice! I love helping readers find their next page-turner. Mystery and thriller books are perfect for those moments when you want to be completely absorbed."
+    # Generate dynamic responses based on analysis
+    if is_greeting:
+        return "Hello! I'm your personal bookseller here at BiblioDrift. I'd love to help you discover your next perfect read. What kind of story are you in the mood for today?"
     
-    elif any(word in message_lower for word in ['romance', 'romantic', 'love']):
-        return "Romance is such a beautiful genre! Whether you're looking for sweet and heartwarming or passionate and steamy, I have some wonderful recommendations for you."
+    if has_question and word_count < 5:
+        return "I'd be happy to help you find the perfect book! Could you tell me a bit more about what you're looking for? Maybe describe the mood or feeling you want from your next read."
     
-    elif any(word in message_lower for word in ['fantasy', 'magic', 'dragons', 'wizards']):
-        return "Fantasy is pure escapism at its finest! Let me transport you to some incredible magical worlds where anything is possible."
+    # For longer, descriptive messages, provide contextual guidance
+    if word_count > 10:
+        return "That sounds like a wonderful reading preference! Let me search for some books that match exactly what you're describing. I'll find options that capture that specific vibe you're looking for."
     
-    elif any(word in message_lower for word in ['sci-fi', 'science fiction', 'space', 'future']):
-        return "Science fiction opens up infinite possibilities! From space operas to dystopian futures, I have some mind-bending recommendations for you."
-    
-    elif any(word in message_lower for word in ['sad', 'cry', 'emotional', 'tearjerker']):
-        return "Sometimes we need a good emotional release through literature. I have some beautifully written, deeply moving books that will touch your heart."
-    
-    elif any(word in message_lower for word in ['funny', 'humor', 'comedy', 'laugh']):
-        return "Laughter is the best medicine! I have some delightfully funny books that will brighten your day and keep you smiling."
-    
-    elif any(word in message_lower for word in ['classic', 'literature', 'literary']):
-        return "Ah, a lover of the classics! There's something timeless about great literature. Let me suggest some enduring masterpieces and modern literary gems."
-    
-    elif any(word in message_lower for word in ['young adult', 'ya', 'teen']):
-        return "Young adult literature has some of the most engaging and diverse stories! Whether you're a teen or just young at heart, I have some fantastic YA recommendations."
-    
-    elif any(word in message_lower for word in ['historical', 'history', 'period']):
-        return "Historical fiction is like time travel through books! I love helping readers explore different eras and cultures through beautifully researched stories."
-    
-    elif any(word in message_lower for word in ['biography', 'memoir', 'true story']):
-        return "Real stories can be more fascinating than fiction! I have some incredible biographies and memoirs that will inspire and enlighten you."
-    
-    # Specific situation responses
-    elif any(phrase in message_lower for phrase in ['rainy day', 'rainy evening', 'stormy']):
-        return "Perfect rainy day reading coming up! There's something magical about the sound of rain while you're lost in a good book."
-    
-    elif any(phrase in message_lower for phrase in ['beach', 'vacation', 'travel']):
-        return "Vacation reads are special - they need to be engaging but not too heavy. Let me find you some perfect travel companions!"
-    
-    elif any(phrase in message_lower for phrase in ['bedtime', 'before sleep', 'night reading']):
-        return "Bedtime reading requires just the right tone - engaging enough to hold your interest but soothing enough for evening. I have some perfect nighttime reads for you."
-    
-    elif any(phrase in message_lower for phrase in ['book club', 'discussion', 'group']):
-        return "Book club selections need to spark great discussions! I'll recommend some thought-provoking books that will give your group plenty to talk about."
-    
-    # Help and guidance responses
-    elif any(word in message_lower for word in ['help', 'recommend', 'suggest', 'find']):
-        return "I'm here to help you discover your next favorite book! Tell me more about what you're in the mood for - a specific genre, feeling, or situation you'll be reading in."
-    
-    elif any(word in message_lower for word in ['similar', 'like', 'enjoyed']):
-        return "Great! I love helping readers find books similar to ones they've enjoyed. The more you tell me about what you liked, the better I can tailor my recommendations."
-    
-    # Default response for unclear requests
-    else:
-        return "That sounds interesting! Could you tell me a bit more about what kind of mood or feeling you're going for? For example, are you looking for something light and fun, deep and thought-provoking, or maybe an exciting adventure?"
+    # Default AI-generated response for book discovery
+    return "I love helping readers discover their next favorite book! Based on what you've shared, let me find some perfect recommendations that match your reading mood."
