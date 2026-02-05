@@ -59,10 +59,14 @@ class AIBookService:
 ```
 
 #### 4. Flask API Endpoints (`app.py`)
-- `POST /api/v1/analyze-mood` - Full mood analysis
-- `POST /api/v1/mood-tags` - Quick mood tags
-- `POST /api/v1/generate-note` - Enhanced note generation
+- `GET /` - API documentation and endpoint list (visit in browser)
 - `GET /api/v1/health` - Health check
+- `POST /api/v1/analyze-mood` - Full mood analysis (**POST only**)
+- `POST /api/v1/mood-tags` - Quick mood tags (**POST only**)
+- `POST /api/v1/generate-note` - Enhanced note generation (**POST only**)
+- `POST /api/v1/chat` - Chat with bookseller (**POST only**)
+
+**Note**: POST-only endpoints will return 405 Method Not Allowed when accessed via browser GET requests. This is expected behavior.
 
 ### Frontend Integration
 
@@ -94,6 +98,11 @@ python app.py
 ```
 Server runs on `http://localhost:5000`
 
+**Important for Developers**: 
+- Visit `http://localhost:5000/` in your browser to see available API endpoints and usage examples
+- **All mood analysis endpoints are POST-only** - visiting them in browser will return 405 Method Not Allowed (this is expected)
+- Use curl, Postman, or the frontend JavaScript to test the APIs
+
 ### 3. Open Frontend
 Open `index.html` in your browser. The frontend will automatically connect to the backend for mood analysis.
 
@@ -109,8 +118,16 @@ Open `index.html` in your browser. The frontend will automatically connect to th
 
 #### API Usage Examples
 
+**Important**: All endpoints except `/` and `/api/v1/health` require POST requests with JSON body.
+
 **Analyze Book Mood:**
-```javascript
+```bash
+# Using curl (recommended for testing)
+curl -X POST http://localhost:5000/api/v1/analyze-mood \
+  -H "Content-Type: application/json" \
+  -d '{"title": "The Seven Husbands of Evelyn Hugo", "author": "Taylor Jenkins Reid"}'
+
+# Using JavaScript (frontend integration)
 const response = await fetch('http://localhost:5000/api/v1/analyze-mood', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -123,7 +140,13 @@ const data = await response.json();
 ```
 
 **Get Quick Mood Tags:**
-```javascript
+```bash
+# Using curl
+curl -X POST http://localhost:5000/api/v1/mood-tags \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Where the Crawdads Sing", "author": "Delia Owens"}'
+
+# Using JavaScript
 const response = await fetch('http://localhost:5000/api/v1/mood-tags', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -194,7 +217,9 @@ self.mood_keywords = {
 
 **"Mood analysis not available"**
 - Backend server may not be running
-- Check `http://localhost:5000/api/v1/health`
+- Check `http://localhost:5000/api/v1/health` (GET request)
+- **Don't visit POST endpoints in browser** - they will return 405 Method Not Allowed (expected behavior)
+- Use curl or the frontend JavaScript to test POST endpoints
 - Verify CORS settings for cross-origin requests
 
 **Slow performance**
