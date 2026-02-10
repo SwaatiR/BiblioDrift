@@ -69,6 +69,13 @@ def _rate_limited(endpoint: str) -> tuple[bool, int]:
 if MOOD_ANALYSIS_AVAILABLE:
     ai_service = AIBookService()
 
+@app.route('/api/v1/config', methods=['GET'])
+def get_config():
+    """Serve public configuration values like Google Books API Key."""
+    return jsonify({
+        "google_books_key": os.getenv('GOOGLE_BOOKS_API_KEY', '')
+    })
+
 @app.route('/')
 def index():
     """Simple index page showing available API endpoints."""

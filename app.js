@@ -7,6 +7,24 @@
 const API_BASE = 'https://www.googleapis.com/books/v1/volumes';
 const MOOD_API_BASE = 'http://localhost:5000/api/v1';
 
+let API_KEY = '';
+
+async function loadEnvConfig() {
+    try {
+        const res = await fetch(`${MOOD_API_BASE}/config`);
+        if (res.ok) {
+            const data = await res.json();
+            API_KEY = data.google_books_key || '';
+            if (API_KEY) {
+                console.log('Google Books API Key loaded securely.');
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to load secure config:', err);
+    }
+}
+
+
 const MOCK_BOOKS = [
     {
         id: "mock1",
@@ -449,7 +467,8 @@ class BookRenderer {
 
 
         try {
-            const res = await fetch(`${API_BASE}?q=${query}&maxResults=5&printType=books`);
+            const apiKeyParam = API_KEY ? `&key=${API_KEY}` : '';
+            const res = await fetch(`${API_BASE}?q=${query}&maxResults=5&printType=books${apiKeyParam}`);
 
             let items = [];
             if (res.ok) {
@@ -863,7 +882,8 @@ class GenreManager {
         try {
             // Fetch relevant books from Google Books API
             // Using subject search and higher relevance
-            const response = await fetch(`${API_BASE}?q=subject:${genre}&maxResults=20&langRestrict=en&orderBy=relevance`);
+            const apiKeyParam = API_KEY ? `&key=${API_KEY}` : '';
+            const response = await fetch(`${API_BASE}?q=subject:${genre}&maxResults=20&langRestrict=en&orderBy=relevance${apiKeyParam}`);
 
             let items = [];
             if (response.ok) {
@@ -919,7 +939,10 @@ class GenreManager {
 }
 
 // Init
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load secure config first
+    await loadEnvConfig();
+
     const libManager = new LibraryManager();
     const renderer = new BookRenderer(libManager);
     const themeManager = new ThemeManager();
