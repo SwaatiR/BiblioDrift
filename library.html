@@ -47,17 +47,41 @@
     </header>
 
     <main>
-        <section class="hero" style="padding-bottom: 2rem;">
-            <h1>My Virtual Library</h1>
-            <p>A quiet sanctuary for your stories.</p>
-        </section>
+        <section class="hero" style="padding-bottom: 2rem; position: relative;">
+    <h1>My Virtual Library</h1>
+    <p>A quiet sanctuary for your stories.</p>
 
-        <div class="shelves-container">
-            <div>
-                <span class="shelf-label">Currently Immersed 📖</span>
-                <div class="shelf-row" id="shelf-current">
-                    <div class="empty-state" style="color: #8D6E63; font-style: italic; align-self: center; width: 100%; padding: 2rem;">
-                        Your nightstand is empty...
+    <button id="export-library" class="btn-icon" style="position: absolute; top: 45; right: 0;" title="Export Library">
+        <i class="fa-solid fa-download"></i> Export Library
+    </button>
+    <div class="sort-controls" style="position: absolute; top: 45px; right: 180px;">
+        <i class="fa-solid fa-filter"></i>
+        <select id="library-filter" class="sort-select" style="margin-right: 1rem;">
+            <option value="all">All Shelves</option>
+            <option value="current">Currently Immersed</option>
+            <option value="want">Anticipated Journeys</option>
+            <option value="finished">Finished Books</option>
+        </select>
+        <i class="fa-solid fa-arrow-down-short-wide"></i>
+        <select id="library-sort" class="sort-select">
+            <option value="title">Sort by Title</option>
+            <option value="author">Sort by Author</option>
+            <option value="rating">Sort by Rating</option>
+            <option value="pages">Sort by Pages</option>
+        </select>
+    </div>
+</section>
+
+
+        <!-- 3D Bookshelf Container -->
+        <div class="bookshelf-3d-container" id="library-shelves">
+
+            <!-- Currently Reading Shelf -->
+            <div class="shelf-section-3d">
+                <span class="shelf-label">📖 Currently Immersed</span>
+                <div class="bookshelf-3d">
+                    <div class="books-row-3d" id="shelf-current-3d">
+                        <!-- Books will be injected via JS -->
                     </div>
                 </div>
             </div>
