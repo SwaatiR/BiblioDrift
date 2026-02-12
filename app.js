@@ -1132,6 +1132,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
+    // Check if Profile Page
+    if (document.getElementById('profile-page')) {
+        const user = libManager.getUser();
+        if (!user) {
+            window.location.href = 'auth.html';
+            return;
+        }
+
+        // populate User Info
+        document.getElementById('profile-username').textContent = user.username || 'Bookworm';
+        document.getElementById('profile-email').textContent = user.email || '';
+        document.getElementById('profile-joined').textContent = user.created_at ? new Date(user.created_at).getFullYear() : '2024';
+
+        // populate Stats
+        const currentCount = libManager.library.current?.length || 0;
+        const wantCount = libManager.library.want?.length || 0;
+        const finishedCount = libManager.library.finished?.length || 0;
+
+        document.getElementById('stat-current').textContent = currentCount;
+        document.getElementById('stat-want').textContent = wantCount;
+        document.getElementById('stat-finished').textContent = finishedCount;
+
+        // Calculate "Day Streak" (Mock for now, or based on last activity dates if available)
+        // For MVP, randomly generate a streak to encourage user
+        document.getElementById('stat-streak').textContent = Math.floor(Math.random() * 14) + 1;
+
+        // Populate Achievements
+        const achievementsGrid = document.getElementById('achievements-grid');
+        achievementsGrid.innerHTML = '';
+        
+        const achievements = [
+            { id: 'reader', icon: 'fa-book', title: 'Avid Reader', desc: 'Finished 5 books', condition: finishedCount >= 5 },
+            { id: 'collector', icon: 'fa-layer-group', title: 'Curator', desc: 'Added 10 books', condition: (currentCount + wantCount + finishedCount) >= 10 },
+            { id: 'critic', icon: 'fa-pen-fancy', title: 'Critic', desc: 'Saved 3 reviews', condition: false }, // Mock
+            { id: 'focused', icon: 'fa-glasses', title: 'Focused', desc: 'Reading 3 at once', condition: currentCount >= 3 }
+        ];
+
+        achievements.forEach(ach => {
+            const card = document.createElement('div');
+            card.className = `achievement-card ${ach.condition ? 'unlocked' : 'locked'}`;
+            card.innerHTML = `
+                <i class="fa-solid ${ach.icon}"></i>
+                <h4>${ach.title}</h4>
+                <p>${ach.desc}</p>
+            `;
+            achievementsGrid.appendChild(card);
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', () => {
+             localStorage.removeItem('bibliodrift_user');
+             window.location.href = 'index.html';
+        });
+    }
+
     // Scroll Manager (Back to Top)
     const backToTopBtn = document.getElementById('backToTop');
     if (backToTopBtn) {
