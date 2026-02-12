@@ -282,31 +282,43 @@ class BookshelfRenderer3D {
 
     createBookSpine(book, index) {
         const spine = document.createElement('div');
-        spine.className = 'book-spine-3d';
+        
+        // Generate deterministic traits
+        const traits = this.generateSpineTraits(book);
+        
+        spine.className = `book-spine-3d ${traits.texture} ${traits.pattern}`;
         spine.dataset.bookId = book.id;
 
         // Vary spine width based on title length and "page count"
         // Wider spines for longer titles to fit full text
         const baseWidth = Math.min(55, 38 + book.title.length * 0.5);
-        const spineWidth = baseWidth + Math.floor(Math.random() * 5);
+        const spineWidth = baseWidth + Math.floor(this._seededRandom(traits.seed + 10) * 5); // Use deterministic random
+        
         // MUCH taller books so full title is readable
         const baseHeight = Math.min(280, 220 + book.title.length * 2.5);
-        const spineHeight = baseHeight + Math.floor(Math.random() * 10);
+        const spineHeight = baseHeight + Math.floor(this._seededRandom(traits.seed + 20) * 10);
 
         spine.style.width = `${spineWidth}px`;
         spine.style.height = `${spineHeight}px`;
-        spine.style.setProperty('--spine-color', book.spineColor);
+        spine.style.setProperty('--spine-color', traits.spineColor);
 
-        // Animation delay for staggered entrance
+        // Animation delay for staggered entrance (keep this index based for UI effect)
         spine.style.animationDelay = `${index * 0.1}s`;
 
+        // Apply Font Class
+        spine.classList.add(traits.fontClass);
+        if (traits.titleModifier) spine.classList.add(traits.titleModifier);
+
         spine.innerHTML = `
-            <div class="spine-face" style="background-color: ${book.spineColor}; color: ${book.textColor};">
+            <div class="spine-face" style="background-color: ${traits.spineColor}; color: ${traits.textColor};">
                 <span class="spine-title">${book.title}</span>
-                <span class="spine-author">${book.author.split(' ').pop()}</span>
+                <span class="spine-author">${book.author ? book.author.split(' ').pop() : ''}</span>
+                ${traits.pattern.includes('ornament') ? '<div class="spine-pattern-ornament"></div>' : ''}
+                ${traits.pattern.includes('bands') ? '<div class="spine-pattern-bands"></div>' : ''}
+                ${traits.pattern.includes('frame') ? '<div class="spine-pattern-frame"></div>' : ''}
             </div>
             <div class="book-edge"></div>
-            <div class="book-top" style="--spine-color: ${book.spineColor};"></div>
+            <div class="book-top" style="--spine-color: ${traits.spineColor};"></div>
         `;
 
         // Event listeners
@@ -316,6 +328,84 @@ class BookshelfRenderer3D {
         spine.addEventListener('click', () => this.openModal(book));
 
         return spine;
+    }
+
+    _hashString(str) {
+        let hash = 0;
+        if (!str) return hash;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash);
+    }
+    
+    _seededRandom(seed) {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    }
+    
+    generateSpineTraits(book) {
+        // Use title + author as seed for deterministic randomness
+        const seedStr = (book.title + (book.author || '')).replace(/\s/g, '');
+        const seed = this._hashString(seedStr);
+        
+        const rand = (offset) => this._seededRandom(seed + offset);
+
+        // 1. Color (if not set or just to ensure coverage)
+        let spineColor = book.spineColor;
+        let textColor = book.textColor;
+        
+        // If no spine color, generate one
+        if (!spineColor) {
+            const hue = Math.floor(rand(1) * 360);
+            const sat = 40 + Math.floor(rand(2) * 40); // 40-80%
+            const lig = 25 + Math.floor(rand(3) * 35); // 25-60%
+            spineColor = `hsl(${hue}, ${sat}%, ${lig}%)`;
+            textColor = lig < 50 ? '#f0f0f0' : '#1a1a1a';
+        }
+
+        // 2. Texture
+        // 40% leather, 30% cloth, 20% paper, 10% worn
+        const rTex = rand(4);
+        let texture = 'spine-texture-paper';
+        if (rTex < 0.4) texture = 'spine-texture-leather';
+        else if (rTex < 0.7) texture = 'spine-texture-cloth';
+        else if (rTex < 0.9) texture = 'spine-texture-paper';
+        else texture = 'spine-texture-worn';
+
+        // 3. Fonts
+        const rFont = rand(5);
+        let fontClass = '';
+        if (rFont < 0.3) fontClass = 'font-serif';
+        else if (rFont < 0.6) fontClass = 'font-sans';
+        else if (rFont < 0.8) fontClass = 'font-hand';
+        else fontClass = ''; // Default
+
+        // 4. Patterns
+        const rPat = rand(6);
+        let pattern = '';
+        if (rPat < 0.2) pattern = 'spine-pattern-bands';
+        else if (rPat < 0.3) pattern = 'spine-pattern-frame';
+        else if (rPat < 0.4) pattern = 'spine-pattern-ornament';
+        else pattern = ''; 
+
+        // 5. Title Modifiers
+        const rMod = rand(7);
+        let titleModifier = '';
+        if (book.title.length < 10 && rMod < 0.2) titleModifier = 'title-stacked';
+        else if (rMod > 0.9) titleModifier = 'title-rotate-up';
+
+        return {
+            seed,
+            spineColor,
+            textColor,
+            texture,
+            fontClass,
+            pattern,
+            titleModifier
+        };
     }
 
     showTooltip(e, book) {
