@@ -627,6 +627,57 @@ class LibraryManager {
         }
     }
 
+    async syncLocalToBackend(user) {
+        if (!user) return;
+        
+        // Flatten local library into a list of items with 'shelf' property
+        const itemsToSync = [];
+        ['current', 'want', 'finished'].forEach(shelf => {
+            if (this.library[shelf]) {
+                this.library[shelf].forEach(book => {
+                    // Avoid syncing items that obviously came from backend (have db_id) 
+                    // UNLESS you want to support offline updates (which is harder).
+                    // The requirement is "upload anonymous local library when user signs up".
+                    // Anonymous items won't have db_id.
+                    if (!book.db_id) {
+                        itemsToSync.push({
+                            ...book,
+                            shelf: shelf
+                        });
+                    }
+                });
+            }
+        });
+
+        if (itemsToSync.length === 0) return; // Nothing to sync
+
+        try {
+            console.log(`Syncing ${itemsToSync.length} items to backend...`);
+            const res = await fetch(`${this.apiBase}/library/sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    items: itemsToSync
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                console.log("Sync result:", data);
+                showToast(`Synced ${data.message}`, "success");
+                
+                // After upload, pull fresh state from backend to get the new DB IDs
+                await this.syncWithBackend(); 
+            } else {
+                console.error("Backend refused sync");
+            }
+        } catch (e) {
+            console.error("Sync upload failed", e);
+            showToast("Failed to upload local library", "error");
+        }
+    }
+
     setupSorting() {
         const sortSelect = document.getElementById('sortLibrary');
         if (sortSelect) {
@@ -971,6 +1022,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadEnvConfig();
 
     const libManager = new LibraryManager();
+    window.libManager = libManager; // Expose for Auth
+
+    // Auth Page Logic (Toggle Login/Register)
+    const toggleLink = document.querySelector('.toggle-link');
+    const authTitle = document.querySelector('.auth-container h2');
+    const authBtn = document.querySelector('.auth-btn');
+    const authForm = document.querySelector('form');
+
+    if (toggleLink && authTitle && authBtn && authForm) {
+        let isLogin = true;
+        authForm.dataset.mode = 'login'; // Default
+
+        // Create Username Input for Register mode
+        const usernameInput = document.createElement('input');
+        usernameInput.type = 'text';
+        usernameInput.id = 'username';
+        usernameInput.className = 'auth-input';
+        usernameInput.placeholder = 'Username';
+        usernameInput.style.display = 'none';
+        
+        // Insert before email
+        const emailInput = document.getElementById('email');
+        if (emailInput) {
+            authForm.insertBefore(usernameInput, emailInput);
+        }
+
+        toggleLink.addEventListener('click', () => {
+            isLogin = !isLogin;
+            authForm.dataset.mode = isLogin ? 'login' : 'register';
+            
+            if (isLogin) {
+                authTitle.textContent = 'Welcome Back';
+                authBtn.textContent = 'Sign In';
+                toggleLink.textContent = 'No account? Create one.';
+                usernameInput.style.display = 'none';
+                usernameInput.removeAttribute('required');
+            } else {
+                authTitle.textContent = 'Create Account';
+                authBtn.textContent = 'Sign Up';
+                toggleLink.textContent = 'Already have an account? Sign In.';
+                usernameInput.style.display = 'block';
+                usernameInput.setAttribute('required', 'true');
+            }
+        });
+    }
+
     const renderer = new BookRenderer(libManager);
     const themeManager = new ThemeManager();
     const genreManager = new GenreManager();
@@ -1079,19 +1176,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function handleAuth(event) {
+async function handleAuth(event) {
     event.preventDefault();
+    const form = event.target;
+    // Determine mode from dataset (set by our toggle logic) or default to login
+    const mode = form.dataset.mode || 'login';
 
     const email = document.getElementById("email").value;
-
+    const password = form.querySelector('input[type="password"]').value;
+    const usernameInput = document.getElementById("username");
+    
+    // Validate Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     if (!emailRegex.test(email)) {
-        alert("Enter a valid email address");
+        if (typeof showToast === 'function') showToast("Enter a valid email address", "error");
+        else alert("Enter a valid email address");
         return;
     }
 
-    window.location.href = "library.html";
+    // Prepare Payload
+    let payload = {};
+    let endpoint = "";
+    
+    if (mode === 'register') {
+        const username = usernameInput ? usernameInput.value : email.split('@')[0];
+        endpoint = '/api/v1/register';
+        payload = { username, email, password };
+    } else {
+        endpoint = '/api/v1/login';
+        payload = { username: email, password: password };
+    }
+
+    try {
+        const btn = form.querySelector('button');
+        const originalText = btn.textContent;
+        btn.textContent = 'Processing...';
+        btn.disabled = true;
+
+        const res = await fetch(`http://localhost:5000${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        
+        btn.textContent = originalText;
+        btn.disabled = false;
+
+        if (res.ok) {
+            // Success!
+            localStorage.setItem('bibliodrift_user', JSON.stringify(data.user));
+            
+            if (typeof showToast === 'function') 
+                showToast(`${mode === 'login' ? 'Welcome back' : 'Welcome'}, ${data.user.username}!`, "success");
+
+            // SYNC LOGIC
+            // If we have a library manager exposed, use it to sync anonymous data
+            if (window.libManager) {
+                if (typeof showToast === 'function') showToast("Syncing your library...", "info");
+                await window.libManager.syncLocalToBackend(data.user);
+            }
+
+            // Redirect
+            setTimeout(() => {
+                window.location.href = "library.html";
+            }, 1000);
+        } else {
+            if (typeof showToast === 'function') showToast(data.error || "Authentication failed", "error");
+            else alert(data.error || "Authentication failed");
+        }
+    } catch (e) {
+        console.error("Auth Error", e);
+        if (typeof showToast === 'function') showToast("Server connection failed", "error");
+        else alert("Server connection failed");
+        const btn = form.querySelector('button');
+        if (btn) btn.disabled = false;
+    }
 }
 
 

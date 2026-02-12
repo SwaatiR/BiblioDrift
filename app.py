@@ -408,6 +408,54 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
+@app.route('/api/v1/library/sync', methods=['POST'])
+def sync_library():
+    """Sync a list of books from local storage to the user's account."""
+    data = request.json
+    user_id = data.get('user_id')
+    items = data.get('items', [])
+    
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+        
+    synced_count = 0
+    errors = 0
+    
+    for item_data in items:
+        # Check if already exists to avoid duplicates
+        existing = ShelfItem.query.filter_by(
+            user_id=user_id, 
+            google_books_id=item_data.get('id')
+        ).first()
+        
+        if not existing:
+            try:
+                volume_info = item_data.get('volumeInfo', {})
+                image_links = volume_info.get('imageLinks', {})
+                authors = volume_info.get('authors', [])
+                if isinstance(authors, list):
+                    authors = ", ".join(authors)
+                
+                new_item = ShelfItem(
+                    user_id=user_id,
+                    google_books_id=item_data.get('id'),
+                    title=volume_info.get('title', 'Untitled'),
+                    authors=authors,
+                    thumbnail=image_links.get('thumbnail', ''),
+                    shelf_type=item_data.get('shelf', 'want')
+                )
+                db.session.add(new_item)
+                synced_count += 1
+            except Exception:
+                errors += 1
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": f"Synced {synced_count} items", "errors": errors}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/v1/register', methods=['POST'])
 def register():
     data = request.json
@@ -419,7 +467,15 @@ def register():
 
     try:
         register_user(username, email, password)
-        return jsonify({"message": "User registered successfully"}), 201
+        user = User.query.filter_by(username=username).first()
+        return jsonify({
+            "message": "User registered successfully",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
+            }
+        }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -431,8 +487,16 @@ def login():
     if not username or not password:
         return jsonify({"error": "Missing fields"}), 400
 
-    if login_user(username, password):
-        return jsonify({"message": "Login successful"}), 200
+    user = login_user(username, password)
+    if user:
+        return jsonify({
+            "message": "Login successful",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
+            }
+        }), 200
     return jsonify({"error": "Invalid username or password"}), 401
 
 with app.app_context():
