@@ -4,14 +4,13 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
+import os
 from datetime import datetime
 from ai_service import generate_book_note, get_ai_recommendations, get_book_mood_tags_safe, generate_chat_response, llm_service
-from ai_service import generate_book_note, get_ai_recommendations, get_book_mood_tags_safe
 from models import db, User, ShelfItem, register_user, login_user
 from collections import defaultdict, deque
 from math import ceil
 from time import time
-from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -68,6 +67,13 @@ def _rate_limited(endpoint: str) -> tuple[bool, int]:
 # Initialize AI service if available
 if MOOD_ANALYSIS_AVAILABLE:
     ai_service = AIBookService()
+
+@app.route('/api/v1/config', methods=['GET'])
+def get_config():
+    """Serve public configuration values like Google Books API Key."""
+    return jsonify({
+        "google_books_key": os.getenv('GOOGLE_BOOKS_API_KEY', '')
+    })
 
 @app.route('/')
 def index():
@@ -322,10 +328,12 @@ def health_check():
             "llm_service_available": llm_service.is_available(),
             "openai_configured": llm_service.openai_client is not None,
             "groq_configured": llm_service.groq_client is not None,
-            "gemini_configured": llm_service.gemini_model is not None,
+            "gemini_configured": llm_service.gemini_client is not None,
             "preferred_llm": llm_service.preferred_llm
         }
     })
+
+
 
 @app.route('/api/v1/library', methods=['POST'])
 def add_to_library():
@@ -393,13 +401,61 @@ def remove_from_library(item_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-import os
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///biblio.db')
 if app.config['SQLALCHEMY_DATABASE_URI'] and app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
+
+@app.route('/api/v1/library/sync', methods=['POST'])
+def sync_library():
+    """Sync a list of books from local storage to the user's account."""
+    data = request.json
+    user_id = data.get('user_id')
+    items = data.get('items', [])
+    
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+        
+    synced_count = 0
+    errors = 0
+    
+    for item_data in items:
+        # Check if already exists to avoid duplicates
+        existing = ShelfItem.query.filter_by(
+            user_id=user_id, 
+            google_books_id=item_data.get('id')
+        ).first()
+        
+        if not existing:
+            try:
+                volume_info = item_data.get('volumeInfo', {})
+                image_links = volume_info.get('imageLinks', {})
+                authors = volume_info.get('authors', [])
+                if isinstance(authors, list):
+                    authors = ", ".join(authors)
+                
+                new_item = ShelfItem(
+                    user_id=user_id,
+                    google_books_id=item_data.get('id'),
+                    title=volume_info.get('title', 'Untitled'),
+                    authors=authors,
+                    thumbnail=image_links.get('thumbnail', ''),
+                    shelf_type=item_data.get('shelf', 'want')
+                )
+                db.session.add(new_item)
+                synced_count += 1
+            except Exception:
+                errors += 1
+    
+    try:
+        db.session.commit()
+        return jsonify({"message": f"Synced {synced_count} items", "errors": errors}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/v1/register', methods=['POST'])
 def register():
@@ -412,7 +468,15 @@ def register():
 
     try:
         register_user(username, email, password)
-        return jsonify({"message": "User registered successfully"}), 201
+        user = User.query.filter_by(username=username).first()
+        return jsonify({
+            "message": "User registered successfully",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
+            }
+        }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -424,8 +488,16 @@ def login():
     if not username or not password:
         return jsonify({"error": "Missing fields"}), 400
 
-    if login_user(username, password):
-        return jsonify({"message": "Login successful"}), 200
+    user = login_user(username, password)
+    if user:
+        return jsonify({
+            "message": "Login successful",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email
+            }
+        }), 200
     return jsonify({"error": "Invalid username or password"}), 401
 
 with app.app_context():
