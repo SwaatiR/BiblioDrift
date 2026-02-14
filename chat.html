@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,18 +9,22 @@
     <!-- Unified Font Imports -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Georgia&display=swap" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Georgia&display=swap"
+        rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 </head>
+
 <body>
-    <!-- Unified Navigation Header -->
+    <!-- Navigation -->
     <header>
         <a href="index.html" class="logo">
-            <i class="fa-solid fa-book-open"></i> BiblioDrift
+            <img style="height: 40px" src="biblioDrift_favicon.png" alt="BiblioDrift Logo"> BiblioDrift
         </a>
         <div class="header-controls">
             <div class="search-bar">
-                <input type="text" id="searchInput" class="search-input" placeholder="Search for a feeling..." />
+                <input type="text" id="searchInput" class="search-input" placeholder="Search for a feeling...">
                 <i class="fa-solid fa-search search-icon"></i>
             </div>
             <nav class="nav-links">
@@ -82,8 +87,10 @@
                     </div>
                     <div class="message-content">
                         <div class="message-bubble">
-                            <p>Hello! I'm your personal bookseller. I'm here to help you discover your next favorite book based on your mood, preferences, and what you're feeling like reading.</p>
-                            <p>Tell me what kind of vibe you're looking for - maybe something cozy for a rainy evening, or an adventurous tale to spark your imagination?</p>
+                            <p>Hello! I'm your personal bookseller. I'm here to help you discover your next favorite
+                                book based on your mood, preferences, and what you're feeling like reading.</p>
+                            <p>Tell me what kind of vibe you're looking for - maybe something cozy for a rainy evening,
+                                or an adventurous tale to spark your imagination?</p>
                         </div>
                         <div class="message-time">Just now</div>
                     </div>
@@ -118,13 +125,8 @@
             <!-- Chat Input -->
             <div class="chat-input-container">
                 <div class="chat-input-wrapper">
-                    <textarea 
-                        id="chatInput" 
-                        placeholder="Tell me what kind of book you're in the mood for..."
-                        rows="1"
-                        onkeydown="handleKeyDown(event)"
-                        oninput="adjustTextareaHeight(this)"
-                    ></textarea>
+                    <textarea id="chatInput" placeholder="Tell me what kind of book you're in the mood for..." rows="1"
+                        onkeydown="handleKeyDown(event)" oninput="adjustTextareaHeight(this)"></textarea>
                     <button class="send-btn" id="sendBtn">
                         <i class="fa-solid fa-paper-plane"></i>
                     </button>
@@ -160,7 +162,7 @@
             if (isLoggedIn) {
                 const link = document.getElementById('navAuthLink');
                 const tooltip = document.getElementById('navAuthTooltip');
-                
+
                 if (link) {
                     link.innerHTML = '<i class="fa-solid fa-user"></i>';
                     link.href = 'profile.html';
@@ -176,4 +178,5 @@
     <script src="footer.js"></script>
     <script src="script/header-scroll.js"></script>
 </body>
+
 </html>

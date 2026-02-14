@@ -6,6 +6,21 @@
 const API_BASE = 'https://www.googleapis.com/books/v1/volumes';
 const MOOD_API_BASE = 'http://localhost:5000/api/v1';
 
+let GOOGLE_API_KEY = '';
+
+async function loadConfig() {
+    try {
+        const res = await fetch(`${MOOD_API_BASE}/config`);
+        if (res.ok) {
+            const data = await res.json();
+            GOOGLE_API_KEY = data.google_books_key || '';
+            console.log("Config loaded");
+        }
+    } catch (e) {
+        console.warn("Failed to load backend config", e);
+    }
+}
+
 // Toast Notification Helper
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
@@ -68,6 +83,7 @@ const MOCK_BOOKS = [
         }
     }
 ];
+
 
 class BookRenderer {
     constructor(libraryManager = null) {
@@ -160,12 +176,12 @@ class BookRenderer {
     openModal(book) {
         const modal = document.getElementById('book-details-modal');
         if (!modal) return;
-        
+
         document.getElementById('modal-img').src = book.volumeInfo.imageLinks?.thumbnail.replace('http:', 'https:') || '';
         document.getElementById('modal-title').textContent = book.volumeInfo.title;
         document.getElementById('modal-author').textContent = book.volumeInfo.authors?.join(", ") || "Unknown Author";
         document.getElementById('modal-summary').textContent = book.volumeInfo.description || "No description available.";
-        
+
         modal.showModal();
         document.getElementById('closeModalBtn').onclick = () => modal.close();
     }
@@ -174,7 +190,8 @@ class BookRenderer {
         const container = document.getElementById(elementId);
         if (!container) return;
         try {
-            const res = await fetch(`${API_BASE}?q=${query}&maxResults=5&printType=books`);
+            const keyParam = GOOGLE_API_KEY ? `&key=${GOOGLE_API_KEY}` : '';
+            const res = await fetch(`${API_BASE}?q=${query}&maxResults=5&printType=books${keyParam}`);
 
             if (!res.ok) {
                 throw new Error(`API Error: ${res.statusText}`);
@@ -195,7 +212,6 @@ class BookRenderer {
                         <p>No books found. The shelves are empty.</p>
                     </div>`;
             }
-
         } catch (err) {
             console.error("Failed to fetch books", err);
             showToast("Failed to load bookshelf.", "error");
@@ -236,45 +252,74 @@ class LibraryManager {
             const res = await fetch(`${this.apiBase}/library/${user.id}`);
             if (res.ok) {
                 const data = await res.json();
-                // Merge backend data into local structures for rendering
-                // Note: To be robust, this should handle duplicates, but for MVP we'll just parse
-                // the backend items into shelves
-                const backendLibrary = { current: [], want: [], finished: [] };
 
+                // Merge Strategy:
+                // 1. Create a map of existing local books for quick lookup
+                const localBooksMap = new Map();
+                ['current', 'want', 'finished'].forEach(shelf => {
+                    this.library[shelf].forEach(book => {
+                        localBooksMap.set(book.id, { book, shelf });
+                    });
+                });
+
+                // 2. Process backend books
                 data.library.forEach(item => {
-                    // Reconstruct book object structure expected by renderer
-                    const book = {
+                    const existing = localBooksMap.get(item.google_books_id);
+
+                    // Construct standard book object
+                    const remoteBook = {
                         id: item.google_books_id,
-                        db_id: item.id, // Database ID for updates/deletes
+                        db_id: item.id,
                         volumeInfo: {
                             title: item.title,
                             authors: item.authors ? item.authors.split(', ') : [],
                             imageLinks: { thumbnail: item.thumbnail }
                         },
+                        // Preserve local progress if exists, else default
+                        progress: existing ? existing.book.progress : (item.shelf_type === 'current' ? 0 : null),
                         date_added: item.created_at || new Date().toISOString()
-                        // Default progress if not stored in DB yet, or add column later
                     };
 
-                    if (backendLibrary[item.shelf_type]) {
-                        backendLibrary[item.shelf_type].push(book);
+                    if (existing) {
+                        // Check if shelf matches
+                        if (existing.shelf !== item.shelf_type) {
+                            // Backend wins on shelf conflict (syncing FROM server)
+                            // Remove from old shelf
+                            this.library[existing.shelf] = this.library[existing.shelf].filter(b => b.id !== item.google_books_id);
+                            // Add to new shelf
+                            this.library[item.shelf_type].push(remoteBook);
+                        } else {
+                            // Update details (e.g. db_id might be missing locally if added offline)
+                            Object.assign(existing.book, remoteBook);
+                        }
+                        // Mark as processed/merged
+                        localBooksMap.delete(item.google_books_id);
+                    } else {
+                        // New book from backend
+                        if (this.library[item.shelf_type]) {
+                            this.library[item.shelf_type].push(remoteBook);
+                        }
                     }
                 });
 
-                // Update local library state (simple override for now to ensure consistency)
-                // In a real app we might merge local+remote
-                if (data.library.length > 0) {
-                    this.library = backendLibrary;
-                    this.saveLocally();
-                    // If we are on library page, trigger re-render
-                    if (document.getElementById('shelf-want')) {
-                        const sortSelect = document.getElementById('sortLibrary');
-                        if (sortSelect) {
-                            this.sortLibrary(sortSelect.value);
-                        } else {
-                            this.renderShelf('want', 'shelf-want');
-                            this.renderShelf('current', 'shelf-current');
-                            this.renderShelf('finished', 'shelf-finished');
-                        }
+                // 3. Handle remaining local books (not in backend)
+                // These could be:
+                // a) Added offline and not yet synced -> Keep them
+                // b) Deleted on another device -> Should remove?
+                // For this implementation, we will KEEP them to prioritize no data loss (offline first).
+                // Ideally, we'd check timestamps or have a specific "sync queue".
+
+                this.saveLocally();
+
+                // Trigger Render
+                if (document.getElementById('shelf-want')) {
+                    const sortSelect = document.getElementById('sortLibrary');
+                    if (sortSelect && typeof this.sortLibrary === 'function') {
+                        this.sortLibrary(sortSelect.value);
+                    } else {
+                        this.renderShelf('want', 'shelf-want');
+                        this.renderShelf('current', 'shelf-current');
+                        this.renderShelf('finished', 'shelf-finished');
                     }
                 }
             }
@@ -322,7 +367,22 @@ class LibraryManager {
     }
 
     async addBook(book, shelf) {
-        if (this.findBook(book.id)) return;
+        // Check if book exists ANYWHERE in library specifically by ID
+        if (this.findBook(book.id)) {
+            // It exists. Check where.
+            const existingShelf = this.findBookShelf(book.id);
+            if (existingShelf === shelf) {
+                showToast("Book already in this shelf!", "info");
+                return;
+            } else if (existingShelf) {
+                // Move logic? For now, prevent duplicates and notify user.
+                // Or allow "moving" implicitly? 
+                // Let's implement move: Remove from old, add to new.
+                this.removeBook(book.id);
+                // Fall through to add
+                showToast(`Moved book from ${existingShelf} to ${shelf}`, "info");
+            }
+        }
 
         const enrichedBook = {
             ...book,
@@ -375,15 +435,20 @@ class LibraryManager {
         return false;
     }
 
-    removeBook(id) {
+    findBookShelf(id) {
         for (const shelf in this.library) {
-            this.library[shelf] = this.library[shelf].filter(b => b.id !== id);
+            if (this.library[shelf].some(b => b.id === id)) return shelf;
         }
-        this.save();
+        return null;
     }
 
-    findBook(id) {
-        return Object.values(this.library).some(shelf => shelf.some(b => b.id === id));
+    findBookInShelf(id) {
+        for (const shelf in this.library) {
+            const book = this.library[shelf].find(b => b.id === id);
+            if (book) return { shelf, book };
+        }
+        return null;
+    }
     async removeBook(id) {
         const result = this.findBookInShelf(id);
         if (result) {
@@ -615,7 +680,10 @@ class GenreManager {
 }
 
 // Init
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load config first to get API keys
+    await loadConfig();
+
     const libManager = new LibraryManager();
     const renderer = new BookRenderer(libManager);
     const themeManager = new ThemeManager();
@@ -669,27 +737,14 @@ document.addEventListener('DOMContentLoaded', () => {
         libManager.renderShelf('finished', 'shelf-finished');
     }
 
-    const genreGrid = document.getElementById('genre-grid');
-    const genreModal = document.getElementById('genre-modal');
-    if (genreGrid && genreModal) {
-        genreGrid.addEventListener('click', async (e) => {
-            const card = e.target.closest('.genre-card');
-            if (card) {
-                const genre = card.dataset.genre;
-                document.getElementById('genre-modal-title').textContent = genre.charAt(0).toUpperCase() + genre.slice(1);
-                genreModal.showModal();
-                const grid = document.getElementById('genre-books-grid');
-                grid.innerHTML = '<p>Loading stories...</p>';
-                
-                // Fetch books for genre
-                const res = await fetch(`${API_BASE}?q=subject:${genre}&maxResults=8`);
-                const data = await res.json();
-                grid.innerHTML = '';
-                if (data.items) {
-                    for (const book of data.items) {
-                        grid.appendChild(await renderer.createBookElement(book));
-                    }
-                }
+    // Scroll Manager (Back to Top)
+    const backToTopBtn = document.getElementById('backToTop');
+    if (backToTopBtn) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 200) {
+                backToTopBtn.classList.remove('hidden');
+            } else {
+                backToTopBtn.classList.add('hidden');
             }
         });
 
@@ -810,12 +865,9 @@ document.addEventListener("click", (e) => {
 
     pageFlipSound.pause();
     pageFlipSound.currentTime = 0;
-    pageFlipSound.play().catch(err => console.log("PLAY ERROR", err));
-
     book.classList.toggle("tap-effect");
     if (overlay) overlay.classList.toggle("tap-overlay");
 });
-
 // ============================================
 // Keyboard Shortcuts Module (Issue #103)
 // ============================================
@@ -837,10 +889,7 @@ const KeyboardShortcuts = {
     },
 
     // Initialize keyboard event listener
-    init() {
-        document.addEventListener('keydown', (e) => this.handleKeyPress(e));
-        console.log('Keyboard shortcuts module initialized');
-    },
+
 
     // Handle keypress events
     handleKeyPress(event) {

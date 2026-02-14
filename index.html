@@ -10,18 +10,20 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Georgia&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Georgia&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 
 <body>
   <header>
     <a href="index.html" class="logo">
-      <i class="fa-solid fa-book-open"></i> BiblioDrift
+      <img style="height: 40px" src="biblioDrift_favicon.png" alt="BiblioDrift Logo"> BiblioDrift
     </a>
     <div class="header-controls">
       <div class="search-bar">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search for a feeling..." />
+        <input type="text" id="searchInput" class="search-input" placeholder="Search for a feeling...">
         <i class="fa-solid fa-search search-icon"></i>
       </div>
       <nav class="nav-links">
@@ -45,6 +47,9 @@
       </nav>
       <button id="themeToggle" class="btn-icon" title="Toggle Theme">
         <i class="fa-solid fa-moon"></i>
+      </button>
+      <button id="export-library" class="btn-icon" title="Export Library">
+        <i class="fa-solid fa-download"></i>
       </button>
     </div>
   </header>
@@ -88,13 +93,15 @@
       </div>
       <div class="genre-grid" id="genre-grid">
         <div class="genre-card" data-genre="romance"><i class="fa-solid fa-heart"></i><span>Romance</span></div>
-        <div class="genre-card" data-genre="mystery"><i class="fa-solid fa-magnifying-glass"></i><span>Mystery</span></div>
+        <div class="genre-card" data-genre="mystery"><i class="fa-solid fa-magnifying-glass"></i><span>Mystery</span>
+        </div>
         <div class="genre-card" data-genre="fiction"><i class="fa-solid fa-book"></i><span>Fiction</span></div>
         <div class="genre-card" data-genre="crime"><i class="fa-solid fa-user-secret"></i><span>Crime</span></div>
         <div class="genre-card" data-genre="fantasy"><i class="fa-solid fa-wand-sparkles"></i><span>Fantasy</span></div>
         <div class="genre-card" data-genre="thriller"><i class="fa-solid fa-skull"></i><span>Thriller</span></div>
         <div class="genre-card" data-genre="biography"><i class="fa-solid fa-user"></i><span>Biography</span></div>
-        <div class="genre-card" data-genre="self-help"><i class="fa-solid fa-hand-holding-heart"></i><span>Self-Help</span></div>
+        <div class="genre-card" data-genre="self-help"><i
+            class="fa-solid fa-hand-holding-heart"></i><span>Self-Help</span></div>
         <div class="genre-card" data-genre="science"><i class="fa-solid fa-flask"></i><span>Science</span></div>
         <div class="genre-card" data-genre="history"><i class="fa-solid fa-landmark"></i><span>History</span></div>
       </div>
@@ -139,6 +146,7 @@
     <i class="fa-solid fa-arrow-up"></i>
   </button>
 
+
   <!-- Enhanced Footer -->
   <footer class="main-footer">
     <div class="footer-container">
@@ -160,7 +168,8 @@
         <div class="social-icons">
           <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
           <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
-          <a href="https://github.com/devanshi14malhotra/BiblioDrift" target="_blank" title="GitHub"><i class="fa-brands fa-github"></i></a>
+          <a href="https://github.com/devanshi14malhotra/BiblioDrift" target="_blank" title="GitHub"><i
+              class="fa-brands fa-github"></i></a>
         </div>
       </div>
     </div>
@@ -188,4 +197,5 @@
     });
   </script>
 </body>
+
 </html>
