@@ -496,61 +496,110 @@ class BookshelfRenderer3D {
         // Hide tooltip
         this.hideTooltip();
 
-        // Populate modal content
-        document.getElementById('modal-cover').src = book.cover;
+        // 1. Reset Flip State
+        const bookObject = document.getElementById('book-3d-object');
+        if (bookObject) bookObject.classList.remove('flipped');
+
+        // 2. Populate Cover
+        const coverImg = document.getElementById('modal-cover');
+        if (coverImg) coverImg.src = book.cover;
+
+        // 3. Style the 3D Book (Spine & Back)
+        const spineColor = book.spineColor || '#5d4037';
+        const textColor = book.textColor || '#fff';
+
+        // Update CSS variables for dynamic coloring if we used them, 
+        // but since we use direct classes, let's query them.
+        const spineFace = document.querySelector('#book-3d-object .face-spine');
+        const backFace = document.querySelector('#book-3d-object .face-back');
+        const backTexture = document.querySelector('#book-3d-object .back-paper-texture');
         
-        // Update Back Cover Styles
-        const backCover = document.getElementById('modal-back-cover');
-        if (backCover) {
-            backCover.style.backgroundColor = book.spineColor || '#5d4037';
-            // Add subtle texture overlay if not present via CSS already
+        if (spineFace) {
+            spineFace.style.backgroundColor = spineColor;
+            // Add title to spine if element exists
+            // (We didn't add a span inside .face-spine in HTML explicitly but let's check if we want to)
         }
-        
-        // Update Description Text Color
+
+        if (backFace) {
+             // The outer back face (binding edge)
+             backFace.style.borderLeftColor = spineColor;
+        }
+
+        if (backTexture) {
+            // The back cover background
+            backTexture.style.backgroundColor = spineColor;
+            backTexture.style.color = textColor;
+            
+            // Also update scrollbar color to match text
+            // We can't easily update pseudo-elements via JS style, 
+            // but we can set a CSS variable on the element
+            backTexture.style.setProperty('--scrollbar-thumb', textColor);
+        }
+
+        // 4. Populate Content
         const descriptionText = document.getElementById('modal-description');
         if (descriptionText) {
             descriptionText.textContent = book.description;
-            if (book.textColor) {
-                descriptionText.style.color = book.textColor;
-                // Also update header if we add one inside back cover
-            } else {
-                 descriptionText.style.color = 'rgba(255,255,255,0.9)';
-            }
+            descriptionText.style.color = textColor;
         }
 
-        document.getElementById('modal-title').textContent = book.title;
+        // Synopsis Title Color
+        const synopsisTitle = document.querySelector('.synopsis-title');
+        if (synopsisTitle) {
+            synopsisTitle.style.color = textColor;
+            synopsisTitle.style.borderColor = textColor.replace(')', ', 0.3)').replace('rgb', 'rgba');
+        }
+
+        const titleEl = document.getElementById('modal-title');
+        const authorEl = document.getElementById('modal-author');
+        const starsEl = document.getElementById('modal-stars');
+        const scoreEl = document.getElementById('modal-rating-score');
+        const countEl = document.getElementById('modal-rating-count');
+
+        if (titleEl) titleEl.textContent = book.title;
+        if (authorEl) authorEl.textContent = book.author; // Removed "by" prefix to match design
+        if (starsEl) starsEl.textContent = this.getStarRating(book.rating);
+        if (scoreEl) scoreEl.textContent = book.rating.toFixed(1);
+        if (countEl) countEl.textContent = `(${book.ratingCount} ratings)`;
 
         // Categories
         const categoriesContainer = document.getElementById('modal-categories');
-        categoriesContainer.innerHTML = book.categories.map(cat =>
-            `<span class="category-tag">${cat}</span>`
-        ).join('');
+        if (categoriesContainer && book.categories) {
+            categoriesContainer.innerHTML = book.categories.map(cat =>
+                `<span class="category-tag">${cat}</span>`
+            ).join('');
+        }
 
         // Reviews
         const reviewsContainer = document.getElementById('modal-reviews');
-        reviewsContainer.innerHTML = book.reviews.map(review => `
-            <div class="review-item">
-                <div class="review-header">
-                    <span class="reviewer-name">${review.name}</span>
-                    <span class="review-rating">${this.getStarRating(review.rating)}</span>
+        if (reviewsContainer && book.reviews) {
+            reviewsContainer.innerHTML = book.reviews.map(review => `
+                <div class="review-item">
+                    <div class="review-header">
+                        <span class="reviewer-name">${review.name}</span>
+                        <span class="review-rating">${this.getStarRating(review.rating)}</span>
+                    </div>
+                    <p class="review-text">"${review.text}"</p>
                 </div>
-                <p class="review-text">"${review.text}"</p>
-            </div>
-        `).join('');
+            `).join('');
+        }
 
         // Show modal
-        this.modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        if (this.modal) {
+            this.modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
     }
 
     closeModal() {
-        this.modal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-
-    setupModalHandlers() {
-        // Close button
-        const closeBtn = document.getElementById('modal-close-btn');
+        if (this.modal) {
+            this.modal.classList.remove('active');
+            // Reset flip after transition
+            setTimeout(() => {
+                const bookObject = document.getElementById('book-3d-object');
+                if (bookObject) bookObject.classList.remove('flipped');
+            }, 500);
+        }
         if (closeBtn) {
             closeBtn.addEventListener('click', (e) => {
                 e.preventDefault();

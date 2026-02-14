@@ -134,46 +134,67 @@
                 <i class="fa-solid fa-times"></i>
             </button>
             <div class="book-detail-content">
-                <div class="book-detail-grid">
-                    <div class="book-visuals-section">
-                        <div class="book-cover-wrapper">
-                            <span class="view-label">Front</span>
-                            <div class="book-cover-3d">
-                                <img class="book-cover-image" id="modal-cover" src="" alt="Book cover">
-                                <div class="book-cover-spine"></div>
+                <div class="book-expanded-layout">
+                    <!-- Left Column: Interactive 3D Book -->
+                    <div class="book-stage">
+                        <div class="book-3d-scene">
+                            <!-- Click on the book to flip it -->
+                            <div class="book-object" id="book-3d-object" onclick="this.classList.toggle('flipped')">
+                                <!-- Front Face -->
+                                <div class="book-face face-front">
+                                    <img id="modal-cover" src="" alt="Book Cover">
+                                    <div class="spine-overlay"></div>
+                                    <div class="lighting-sheen"></div>
+                                </div>
+                                
+                                <!-- Spine Face -->
+                                <div class="book-face face-spine"></div>
+                                
+                                <!-- Back Face -->
+                                <div class="book-face face-back">
+                                    <div class="back-paper-texture">
+                                        <div class="back-content-scroll" id="modal-back-cover">
+                                            <!-- Description injected here -->
+                                            <h3 class="synopsis-title">Synopsis</h3>
+                                            <p id="modal-description" class="book-description-text"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Paper Edges -->
+                                <div class="book-face face-right"></div>
+                                <div class="book-face face-top"></div>
+                                <div class="book-face face-bottom"></div>
                             </div>
                         </div>
-                        
-                        <div class="book-back-wrapper">
-                             <span class="view-label">Back</span>
-                             <div class="book-back-cover" id="modal-back-cover">
-                                <div class="book-back-content">
-                                    <p class="book-description-text" id="modal-description"></p>
-                                </div>
-                             </div>
+                        <div class="flip-instruction">
+                            <i class="fa-solid fa-rotate"></i> Click book to view back cover
                         </div>
                     </div>
 
-                    <div class="book-info-section">
-                        <h1 class="book-title-large" id="modal-title"></h1>
-                        <p class="book-author-large" id="modal-author"></p>
-
-                        <div class="book-meta">
-                            <div class="book-rating-large">
-                                <span class="rating-stars-large" id="modal-stars">★★★★☆</span>
-                                <span class="rating-score" id="modal-rating-score">4.2</span>
-                                <span class="rating-count" id="modal-rating-count">(1,234 ratings)</span>
-                            </div>
-                            <div class="book-categories" id="modal-categories">
-                                <!-- Categories injected via JS -->
-                            </div>
+                    <!-- Right Column: Info & Details -->
+                    <div class="book-info-panel">
+                        <div class="book-header">
+                            <h1 class="book-title-large" id="modal-title"></h1>
+                            <p class="book-author-large" id="modal-author"></p>
                         </div>
 
-                        <!-- Description moved provided in Back Cover view -->
+                        <div class="book-stats-row">
+                            <div class="stat-item">
+                                <div class="book-rating-large">
+                                    <span class="rating-stars-large" id="modal-stars">★★★★☆</span>
+                                    <span class="rating-score" id="modal-rating-score">4.2</span>
+                                </div>
+                                <span class="stat-label" id="modal-rating-count">1,234 ratings</span>
+                            </div>
+                            <div class="stat-item">
+                                <div class="book-categories" id="modal-categories"></div>
+                            </div>
+                        </div>
                         
                         <div class="book-reviews-section">
                             <h3>Reader Reviews</h3>
-                            <div id="modal-reviews">
+                            <div id="modal-reviews" class="reviews-scroll-container">
                                 <!-- Reviews injected via JS -->
                             </div>
                         </div>
