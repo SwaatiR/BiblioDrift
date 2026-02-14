@@ -513,7 +513,7 @@ class BookshelfRenderer3D {
         const spineFace = document.querySelector('#book-3d-object .face-spine');
         const backFace = document.querySelector('#book-3d-object .face-back');
         const backTexture = document.querySelector('#book-3d-object .back-paper-texture');
-        
+
         if (spineFace) {
             spineFace.style.backgroundColor = spineColor;
             // Add title to spine if element exists
@@ -521,15 +521,15 @@ class BookshelfRenderer3D {
         }
 
         if (backFace) {
-             // The outer back face (binding edge)
-             backFace.style.borderLeftColor = spineColor;
+            // The outer back face (binding edge)
+            backFace.style.borderLeftColor = spineColor;
         }
 
         if (backTexture) {
             // The back cover background
             backTexture.style.backgroundColor = spineColor;
             backTexture.style.color = textColor;
-            
+
             // Also update scrollbar color to match text
             // We can't easily update pseudo-elements via JS style, 
             // but we can set a CSS variable on the element
@@ -594,64 +594,90 @@ class BookshelfRenderer3D {
     closeModal() {
         if (this.modal) {
             this.modal.classList.remove('active');
+            document.body.style.overflow = '';
+
             // Reset flip after transition
             setTimeout(() => {
                 const bookObject = document.getElementById('book-3d-object');
                 if (bookObject) bookObject.classList.remove('flipped');
             }, 500);
         }
+    }
+
+    setupModalHandlers() {
+        // Close button
+        const closeBtn = document.getElementById('modal-close-btn');
         if (closeBtn) {
-            closeBtn.addEventListener('click', (e) => {
+            // Remove lingering clones to prevent multiple listeners if re-initialized
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
+            newCloseBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 this.closeModal();
             });
-        } else {
-            console.warn('Modal close button not found');
         }
 
-        // Click outside to close
-        this.modal.addEventListener('click', (e) => {
-            if (e.target === this.modal) {
-                this.closeModal();
-            }
-        });
+        // Click outside to close (backdrop)
+        if (this.modal) {
+            this.modal.addEventListener('click', (e) => {
+                // If clicking the backdrop (modal container itself)
+                if (e.target === this.modal) {
+                    this.closeModal();
+                }
+            });
+        }
 
         // ESC key to close
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.modal.classList.contains('active')) {
+            if (e.key === 'Escape' && this.modal && this.modal.classList.contains('active')) {
                 this.closeModal();
             }
         });
 
-        // Add to library button
-        document.getElementById('modal-add-btn').addEventListener('click', () => {
-            const btn = document.getElementById('modal-add-btn');
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Added!';
-            btn.style.background = '#4CAF50';
+        // Add to library button logic
+        const addBtn = document.getElementById('modal-add-btn');
+        if (addBtn) {
+            const newAddBtn = addBtn.cloneNode(true);
+            addBtn.parentNode.replaceChild(newAddBtn, addBtn);
 
-            // Store in localStorage (integrate with existing library system)
-            this.addToLibrary(this.currentBook);
+            newAddBtn.addEventListener('click', () => {
+                newAddBtn.innerHTML = '<i class="fa-solid fa-check"></i> Added!';
+                newAddBtn.style.background = '#4CAF50';
+                newAddBtn.style.color = '#fff';
 
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fa-regular fa-heart"></i> Add to Library';
-                btn.style.background = '';
-            }, 2000);
-        });
+                // Store in localStorage (integrate with existing library system)
+                if (this.currentBook) {
+                    this.addToLibrary(this.currentBook);
+                }
 
-        // Mark as read button
-        document.getElementById('modal-read-btn').addEventListener('click', () => {
-            const btn = document.getElementById('modal-read-btn');
-            btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Marked!';
-            btn.style.background = 'var(--wood-light)';
-            btn.style.color = 'white';
+                setTimeout(() => {
+                    newAddBtn.innerHTML = '<i class="fa-regular fa-heart"></i> Add to Library';
+                    newAddBtn.style.background = '';
+                    newAddBtn.style.color = '';
+                }, 2000);
+            });
+        }
 
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> Mark as Read';
-                btn.style.background = '';
-                btn.style.color = '';
-            }, 2000);
-        });
+        // Mark as read button logic
+        const readBtn = document.getElementById('modal-read-btn');
+        if (readBtn) {
+            const newReadBtn = readBtn.cloneNode(true);
+            readBtn.parentNode.replaceChild(newReadBtn, readBtn);
+
+            newReadBtn.addEventListener('click', () => {
+                newReadBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> Marked!';
+                newReadBtn.style.background = 'var(--wood-light)';
+                newReadBtn.style.color = 'white';
+
+                setTimeout(() => {
+                    newReadBtn.innerHTML = '<i class="fa-solid fa-check"></i> Mark as Read';
+                    newReadBtn.style.background = '';
+                    newReadBtn.style.color = '';
+                }, 2000);
+            });
+        }
     }
 
     addToLibrary(book) {
